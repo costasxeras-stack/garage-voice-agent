@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Garage Voice Agent</title>
+<meta name="description" content="A voice AI agent for a car repair garage, with every step visible: speech, intent, routing, guardrails, tools and evals.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Literata:opsz,wght@7..72,600;7..72,700&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22%3E%3Crect width=%2224%22 height=%2224%22 rx=%226%22 fill=%22%231f4e79%22/%3E%3Cpath d=%22M12 5a2.5 2.5 0 0 1 2.5 2.5v4a2.5 2.5 0 0 1-5 0v-4A2.5 2.5 0 0 1 12 5zM17 11a5 5 0 0 1-10 0M12 16v3%22 fill=%22none%22 stroke=%22white%22 stroke-width=%221.8%22 stroke-linecap=%22round%22/%3E%3C/svg%3E">
+<link rel="stylesheet" href="app.css">
+<style>
+:root{--accent:#1f4e79;--soft:#e6eef7;--ok:#2e7d32;--oksoft:#e7f3e8;--amber:#a15c00;--ambersoft:#fdf1df}
+.wrap{max-width:1120px}
+.ver{font:600 12px var(--body);color:var(--faint);border:1px solid var(--line);border-radius:999px;padding:2px 8px}
+.call-grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:16px;align-items:start}
+.phone{background:#fff;border:1px solid var(--line);border-radius:22px;overflow:hidden;display:flex;flex-direction:column;margin-top:16px}
+.phone-head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line);background:#fbfaf8}
+.phone-head b{font:700 16px var(--display)}
+.phone-head small{display:block;color:var(--faint);font-size:12.5px}
+.live{display:inline-flex;align-items:center;gap:6px;font:600 12.5px var(--body);color:var(--muted)}
+.live i{width:9px;height:9px;border-radius:50%;background:#c9c4bb}
+.live.listening i{background:#c62828;animation:pulse 1s infinite}
+.live.speaking i{background:var(--accent);animation:pulse 1s infinite}
+.live.thinking i{background:var(--amber)}
+@keyframes pulse{50%{opacity:.35}}
+.convo{height:420px;overflow-y:auto;padding:14px 14px 6px;display:flex;flex-direction:column;gap:8px;background:#fff}
+.msg{max-width:86%;padding:9px 12px;border-radius:14px;font-size:15px;line-height:1.42}
+.msg.agent{background:var(--soft);align-self:flex-start;border-bottom-left-radius:4px}
+.msg.user{background:#f1efea;align-self:flex-end;border-bottom-right-radius:4px}
+.msg .meta{display:block;font-size:11.5px;color:var(--faint);margin-top:3px}
+.msg.interim{opacity:.6;font-style:italic}
+.msg.sys{align-self:center;background:none;color:var(--faint);font-size:12.5px;padding:2px}
+.route{font:600 11px var(--body);padding:1px 7px;border-radius:999px;margin-left:4px;background:#efece7;color:var(--muted)}
+.route.handoff{background:var(--ambersoft);color:var(--amber)}.route.resolved{background:var(--oksoft);color:var(--ok)}.route.refuse{background:var(--warnsoft);color:var(--warn)}
+.controls{border-top:1px solid var(--line);padding:12px 14px;background:#fbfaf8}
+.mic{width:100%;border:0;border-radius:14px;padding:14px;font:700 16px var(--body);background:var(--accent);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px}
+.mic svg{width:20px;height:20px}
+.mic.on{background:#c62828}
+.mic:disabled{opacity:.5;cursor:default}
+.typerow{display:flex;gap:8px;margin-top:10px}
+.typerow input{flex:1}
+.toggles{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:10px;font-size:13.5px;color:var(--muted)}
+.toggles label{display:inline-flex;align-items:center;gap:6px;font-weight:500;margin:0;font-size:13.5px}
+.trace{list-style:none;margin:10px 0 0;padding:0;counter-reset:st}
+.trace li{border:1px solid var(--line);border-radius:12px;padding:9px 12px;margin-top:8px;background:#fff}
+.trace .h{display:flex;justify-content:space-between;align-items:center;gap:8px;font-weight:600;font-size:14.5px}
+.trace > li > .h > span:first-child::before{counter-increment:st;content:counter(st);display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--soft);color:var(--accent);font-size:11.5px;margin-right:8px}
+.trace .ms{font:500 12px var(--body);color:var(--faint);margin-left:6px}
+.trace ul{margin:6px 0 0 28px;padding:0;font-size:13.5px;color:var(--muted);list-style:none}
+.trace ul li{border:0;padding:1px 0;margin:0;background:none;overflow-wrap:anywhere}
+.st-ok{background:var(--oksoft);color:var(--ok)}.st-warn{background:var(--ambersoft);color:var(--amber)}.st-block{background:var(--warnsoft);color:var(--warn)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:14px;margin-top:8px}
+.kv dt{color:var(--faint)}.kv dd{margin:0;overflow-wrap:anywhere}
+.stats.s5{grid-template-columns:repeat(5,1fr)}
+.stats.s4{grid-template-columns:repeat(4,1fr)}
+.stat.gate b{color:var(--ok)}.stat.gate.fail b{color:var(--warn)}
+.stat small{display:block;color:var(--faint);font-size:12px;margin-top:2px}
+details.sample{margin-top:12px;font-size:14px}
+details.sample summary{cursor:pointer;color:var(--accent);font-weight:600}
+.tbl-wrap{overflow-x:auto;margin-top:12px}
+.tbl-wrap table{min-width:560px}
+#g-tbl td:first-child{min-width:240px}
+.res tr.fail td:first-child{border-left:3px solid var(--warn)}
+.res tr.pass td:first-child{border-left:3px solid var(--ok)}
+.res td{vertical-align:top}
+.res .conv{font-size:13px;color:var(--muted);margin:6px 0 0;padding-left:0;list-style:none}
+.res .conv li{margin:2px 0}
+.mini{font-size:12.5px;color:var(--faint)}
+.gatebox{border-radius:14px;padding:14px 16px;margin-top:16px;border:1px solid var(--line)}
+.gatebox.ok{background:var(--oksoft);border-color:#c8e3ca}.gatebox.fail{background:var(--warnsoft);border-color:#f1cdbd}
+.gatebox b{font-family:var(--display);font-size:17px}
+textarea.code{font:13px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;min-height:340px;white-space:pre;overflow:auto}
+pre.code{font:12.5px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;background:#fbfaf8;border:1px solid var(--line);border-radius:12px;padding:12px;max-height:360px;overflow:auto;white-space:pre}
+.agents{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.agent-row{display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:#fff;cursor:pointer;text-align:left;font:inherit}
+.agent-row[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.layers{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-top:10px}
+.layer{border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13.5px;background:#fff}
+.layer b{display:block;font-size:14px}
+.pipe{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:12px;font-size:13.5px}
+.pipe span{border:1px solid var(--line);background:#fff;border-radius:10px;padding:7px 10px}
+.pipe span.p{background:var(--soft);border-color:#c9d8ea}
+.pipe em{color:var(--faint);font-style:normal}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;z-index:50;max-width:92vw}
+.spin{width:14px;height:14px;border:2px solid rgba(255,255,255,.5);border-top-color:#fff;border-radius:50%;display:inline-block;animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+footer.foot{border-top:1px solid var(--line);margin-top:28px;padding:18px 0;color:var(--faint);font-size:13px}
+@media (max-width:860px){.call-grid{grid-template-columns:1fr}.convo{height:360px}.stats.s5,.stats.s4{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:520px){.grid2{grid-template-columns:1fr}.top nav a.hide-s{display:none}}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="brand" href="./"><i><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><path d="M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z"/><path d="M19 11a7 7 0 0 1-14 0M12 18v3"/></svg></i>Garage Voice Agent</a>
+  <nav><span class="ver" id="ver">v0.1.0</span><a class="hide-s" href="https://github.com/costasxeras-stack/Garage-voice-agent">GitHub</a><a href="https://kostasxeras.com">Portfolio</a></nav>
+</div></header>
+<div class="tabs" role="tablist"><div class="wrap">
+  <button role="tab" aria-selected="true" data-tab="call">Call</button>
+  <button role="tab" aria-selected="false" data-tab="evals">Evals</button>
+  <button role="tab" aria-selected="false" data-tab="studio">Studio</button>
+  <button role="tab" aria-selected="false" data-tab="how">How it works</button>
+</div></div>
+
+<main class="wrap">
+<!-- CALL -->
+<section id="tab-call">
+  <div class="intro"><h1>Call the garage's voice agent</h1>
+    <p>A voice agent for a made-up car repair garage. Talk to it, then look at what each layer did: speech to text, guardrails, intent, slots, the decision and the tools it called.</p></div>
+  <div class="card">
+    <div class="grid2">
+      <div><label for="agent-pick">Agent</label><select id="agent-pick"></select></div>
+      <div><label>Understanding</label><div class="seg" id="mode-seg"><button data-mode="rules" aria-pressed="true">Rules (free)</button><button data-mode="llm" aria-pressed="false">Claude (your key)</button></div></div>
+    </div>
+    <div id="key-box" hidden>
+      <div class="grid2">
+        <div><label for="key">Claude API key</label><input type="text" id="key" autocomplete="off" spellcheck="false" placeholder="sk-ant-…"></div>
+        <div><label for="model">Model</label><select id="model"><option value="claude-haiku-5-5" selected>Claude Haiku 5.5 (fastest, cheapest)</option><option value="claude-sonnet-5-5">Claude Sonnet 5.5</option></select></div>
+      </div>
+      <div class="toggles"><label><input type="checkbox" id="word"> Let Claude word the replies</label><label><input type="checkbox" id="remember"> Keep the key in this tab</label></div>
+      <p class="note">The key goes only to Anthropic's API, straight from your browser. Claude understands the caller and can word the reply. The rules still decide what happens, and the guardrails check every reply.</p>
+    </div>
+  </div>
+  <div class="call-grid">
+    <div>
+      <div class="phone">
+        <div class="phone-head"><div><b id="ph-name">Northgate Motors</b><small id="ph-kind">Car repair garage (fictional)</small></div><span class="live" id="live"><i></i><span id="live-t">Ready</span></span></div>
+        <div class="convo" id="convo" aria-live="polite"></div>
+        <div class="controls">
+          <button class="mic" id="mic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z"/><path d="M19 11a7 7 0 0 1-14 0M12 18v3"/></svg><span id="mic-t">Start the call</span></button>
+          <form class="typerow" id="type-form"><input type="text" id="type" placeholder="Or type what the caller says" autocomplete="off" aria-label="Type what the caller says"><button class="btn" type="submit">Send</button></form>
+          <div class="toggles">
+            <label><input type="checkbox" id="speak" checked> Spoken replies</label>
+            <label><input type="checkbox" id="hands"> Hands-free (listen after each reply)</label>
+            <button class="btn small ghost" id="new-call" type="button">New call</button>
+          </div>
+          <p class="note" id="sr-note" hidden>This browser has no speech recognition. Type instead, or open the page in Chrome, Edge or Safari.</p>
+        </div>
+      </div>
+      <details class="sample"><summary>Sample bookings for testing (made up)</summary>
+        <p class="mini">The agent asks for a booking reference and the number plate before it shares anything. These bookings exist only in this demo.</p>
+        <div class="tbl-wrap"><table id="sample-tbl"><thead><tr><th>Reference</th><th>Plate</th><th>Car</th></tr></thead><tbody></tbody></table></div>
+      </details>
+    </div>
+    <div>
+      <div class="card">
+        <h2>Last turn, step by step</h2>
+        <p class="sub">What each layer did with the caller's last sentence, and how long it took in your browser.</p>
+        <ol class="trace" id="trace"><li class="empty" style="border:0;padding:0">Start the call to see the steps.</li></ol>
+      </div>
+      <div class="card">
+        <h2>Call state</h2>
+        <dl class="kv" id="state-kv"></dl>
+      </div>
+    </div>
+  </div>
+  <div class="stats s5" id="session-stats"></div>
+  <p class="note">Session numbers come only from the calls you make on this page. Nothing is sent to a server.</p>
+</section>
+
+<!-- EVALS -->
+<section id="tab-evals" hidden>
+  <div class="intro"><h1>Evals</h1>
+    <p>Scripted test calls played through the same pipeline. Each layer gets its own score, and a release gate says whether this version could ship. The test calls are synthetic: I wrote them, no real callers.</p></div>
+  <div class="card">
+    <div class="grid3">
+      <div><label for="ev-set">Test set</label><select id="ev-set"><option value="holdout">Holdout (30 calls)</option><option value="dev">Dev (40 calls)</option><option value="both">Both (70 calls)</option></select></div>
+      <div><label for="ev-engine">Understanding</label><select id="ev-engine"><option value="rules">Rules (free)</option><option value="llm">Claude (key from the Call tab)</option></select></div>
+      <div><label for="ev-noise">Simulated speech errors</label><select id="ev-noise"><option value="0">None</option><option value="0.1">Light (about 6% of words)</option><option value="0.2">Medium (about 10% of words)</option><option value="0.3">Heavy (about 16% of words)</option></select></div>
+    </div>
+    <div class="row"><button class="btn primary" id="ev-run">Run evals</button><span class="mini" id="ev-prog"></span></div>
+    <p class="note">Speech errors swap words for common mishearings (brake to break, four to for) or drop them. With Rules, a noisy run repeats each call with 10 fixed random seeds and pools the results, because one seed can hide a miss. With Claude, one seed is used to keep the cost down, and each turn is one API call: up to 53 calls for the holdout set.</p>
+  </div>
+  <div id="ev-out" hidden>
+    <div class="gatebox" id="gate"></div>
+    <div class="stats s4" id="ev-stats"></div>
+    <div class="card"><h2>Runs this session <small>compare engines and noise levels</small></h2><div class="tbl-wrap"><table id="runs"><thead><tr><th>Set</th><th>Understanding</th><th>Speech errors</th><th>Pass</th><th>Intent</th><th>Slots</th><th>Safety</th><th>Contained</th><th>Median turn</th></tr></thead><tbody></tbody></table></div></div>
+    <div class="card"><h2>Every call</h2>
+      <div class="row" style="margin-top:8px"><div class="seg" id="ev-filter"><button data-f="fail" aria-pressed="true">Failures</button><button data-f="all" aria-pressed="false">All</button></div></div>
+      <div class="tbl-wrap"><table class="res" id="ev-tbl"><thead><tr><th>Call</th><th>Expected</th><th>Got</th><th>Checks</th></tr></thead><tbody></tbody></table></div>
+    </div>
+  </div>
+  <div class="card"><h2>Guardrail tests <small>component level</small></h2>
+    <p class="sub">Bad replies fed straight into the output guardrails. Each one must be caught, and the good ones must pass untouched. This layer matters most when a model words the reply.</p>
+    <div class="tbl-wrap"><table id="g-tbl"><thead><tr><th>Draft reply</th><th>Must catch</th><th>Caught</th><th></th></tr></thead><tbody></tbody></table></div>
+  </div>
+</section>
+
+<!-- STUDIO -->
+<section id="tab-studio" hidden>
+  <div class="intro"><h1>Studio</h1>
+    <p>Each agent is a config file on top of a shared platform. A new agent only defines its business: services, prices, hours, intents and its own tests. Safety, guardrails, caller checks and the dialogue flows come from the platform. A new agent goes live only when it passes the deploy gate.</p></div>
+  <div class="stats s4" id="plat-stats"></div>
+  <div class="card"><h2>What every agent inherits</h2><div class="layers" id="layers"></div></div>
+  <div class="card">
+    <h2>Agents</h2>
+    <div class="agents" id="agent-list"></div>
+    <div class="row"><button class="btn primary" id="new-agent">Create a new agent from the template</button></div>
+  </div>
+  <div class="card" id="editor-card" hidden>
+    <h2>New agent <small id="timer">timer not started</small></h2>
+    <p class="sub">The template is a tyre shop. Edit anything, then validate. The gate runs the platform's safety tests and the agent's own tests.</p>
+    <label for="cfg">Agent config (JSON)</label>
+    <textarea class="code" id="cfg" spellcheck="false"></textarea>
+    <div class="row"><button class="btn primary" id="validate">Validate and test</button><button class="btn" id="deploy" disabled>Deploy</button><button class="btn ghost" id="reset-tpl">Reset template</button></div>
+    <div id="gate-out"></div>
+  </div>
+  <div class="card" id="view-card"><h2>Config <small id="view-name"></small></h2><pre class="code" id="cfg-view"></pre></div>
+</section>
+
+<!-- HOW -->
+<section id="tab-how" hidden>
+  <div class="intro"><h1>How it works</h1><p>One page, no server. The garage, its prices and its bookings are made up.</p></div>
+  <div class="card"><h2>The pipeline for one caller turn</h2>
+    <div class="pipe"><span>Speech to text</span><em>to</em><span class="p">Input guardrails</span><em>to</em><span class="p">Intent</span><em>to</em><span class="p">Slots</span><em>to</em><span class="p">Policy and tools</span><em>to</em><span>Wording (optional, Claude)</span><em>to</em><span class="p">Output guardrails</span><em>to</em><span>Text to speech</span></div>
+    <p class="sub" style="margin-top:12px">Blue steps are platform rules shared by every agent. Speech uses the browser's built-in recognition and voices. Claude is optional and only does understanding and wording.</p>
+  </div>
+  <div class="card"><h2>Decisions</h2>
+    <ul>
+      <li><b>The model understands, the rules decide.</b> In a regulated or safety-relevant call, what the agent does (hand off, verify, book) must be predictable and testable. Claude reads messy speech better than rules, so it fills the intent and slots. The policy that acts on them stays in code.</li>
+      <li><b>Safety rules always win.</b> If the rules see a safety risk and the model does not, the call is still handed to a mechanic.</li>
+      <li><b>No booking details before the caller is verified</b> with the reference and the number plate. Two wrong plates and the call goes to a person.</li>
+      <li><b>Prices are always estimates,</b> and the agent never says a car is safe to drive or diagnoses it over the phone.</li>
+      <li><b>Confirm before acting.</b> The agent books, moves or cancels only after a yes.</li>
+      <li><b>Free browser speech first.</b> It costs nothing and works in Chrome, Edge and Safari. Voice quality and accuracy are lower than paid speech APIs, which is why the evals include simulated speech errors.</li>
+    </ul>
+  </div>
+  <div class="card"><h2>What is real and what is simulated</h2>
+    <ul>
+      <li>Real: speech recognition and voices (your browser), the Claude calls (your key), every timing shown, and every eval score, computed when you press Run.</li>
+      <li>Simulated: the garage, its prices, opening times and bookings, the tools (they read and write sample data in the page), and the handoff (the call ends with a message).</li>
+      <li>The test calls are synthetic and were written by the same person who wrote the rules. Scores without speech errors are an upper bound, not a measure of real calls.</li>
+    </ul>
+  </div>
+  <div class="card"><h2>Privacy</h2><p class="sub">No transcript leaves your browser in Rules mode. In Claude mode the text of each turn goes to Anthropic's API with your key. Card numbers, emails and phone numbers are removed before anything else happens. Your browser's speech recognition may use its maker's servers (Chrome does).</p></div>
+</section>
+</main>
+<footer class="foot"><div class="wrap"><p style="margin:0">Garage Voice Agent by <a href="https://kostasxeras.com">Konstantinos Xeras</a>. Made-up business and sample data. Built with Claude as engineering partner.</p></div></footer>
+
+<script src="js/engine.js"></script>
+<script src="js/agents.js"></script>
+<script src="js/evalset.js"></script>
+<script src="js/evals.js"></script>
+<script src="js/llm.js"></script>
+<script src="js/ui.js"></script>
+</body>
+</html>
