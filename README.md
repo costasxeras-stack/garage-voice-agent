@@ -4,7 +4,7 @@
 
 **Current version:** 0.1.0 ([changelog](CHANGELOG.md))
 
-Live: https://kostasxeras.com/Garage-voice-agent/
+Live: https://kostasxeras.com/garage-voice-agent/
 
 ![Garage Voice Agent on desktop](docs/screenshots/desktop.webp)
 
