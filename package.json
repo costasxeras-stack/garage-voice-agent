@@ -1,0 +1,12 @@
+{
+  "name": "garage-voice-agent",
+  "version": "0.1.0",
+  "description": "A voice AI agent for a car repair garage, built as a small platform with guardrails, evals and agents as config.",
+  "private": true,
+  "scripts": {
+    "serve": "python3 -m http.server 8000",
+    "evals": "node scripts/run-evals.cjs all",
+    "noise": "node scripts/noise-sweep.cjs"
+  },
+  "license": "MIT"
+}
