@@ -82,9 +82,9 @@ These are the metrics I would track for a real deployment. No real usage yet, so
 
 See also [the platform roadmap](docs/platform-roadmap.md).
 
-## How it was built
+## My role
 
-I framed the problem, chose the scope, made the product calls and wrote the conclusions. Claude (Anthropic) was my engineering partner for the code.
+I framed the problem, chose the scope, made the product calls and wrote the conclusions.
 
 ## Run it yourself
 
