@@ -2,7 +2,7 @@
 
 **A voice AI agent for a car repair garage, built as a small platform: speech in and out, intent detection, routing, guardrails, tool calls, evals with a release gate, and agents defined as config.**
 
-**Current version:** 0.1.0 ([changelog](CHANGELOG.md))
+**Current version:** 0.2.0 ([changelog](CHANGELOG.md))
 
 Live: https://kostasxeras.com/garage-voice-agent/
 

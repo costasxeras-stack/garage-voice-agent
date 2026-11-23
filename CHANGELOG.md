@@ -2,6 +2,18 @@
 
 All notable changes to this project. Versions follow [docs/versioning.md](docs/versioning.md).
 
+## [0.2.0] - 2026-11-23
+
+### Changed
+- New design built from the subject: the call is a navy phone screen with one round call button, and the trace is a workshop job card with numbered steps. Barlow type, steel grey, navy, signal orange and green.
+- Call state moved onto the job card as "Call so far".
+- Version tag hidden on small phones so the header fits.
+
+### Added
+- Decision record 0006: phone and job card design.
+
+The agent, evals and studio work exactly as in 0.1.0.
+
 ## [0.1.0] - 2026-11-22
 
 First release.
